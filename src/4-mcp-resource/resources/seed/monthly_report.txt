@@ -1,0 +1,8 @@
+Report Title: Monthly Sales Report
+
+Summary:
+Total Sales: $25,000
+New Customers: 150
+Churn Rate: 2%
+
+Generated on: 2025-04-26

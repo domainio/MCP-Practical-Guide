@@ -1,0 +1,8 @@
+Report Title: Inventory Status Report
+
+Summary:
+Items In Stock: 5,230
+Items Out of Stock: 320
+Backorders: 45
+
+Generated on: 2025-04-26
