@@ -28,6 +28,13 @@ async def main():
         resource_response = await client.read_resource("another-resource://tag")
         print(f"resource_response: {resource_response}")
         resource_response = await client.read_resource("another-resource://tag")
+        
+        # resource_templates = await client.list_resource_templates()
+        # print(f"resource_templates: {resource_templates}")
+        # report_resource_template = resource_templates[0].uriTemplate.format(name='customer_report.txt')
+        # print(f"report_resource_template: {report_resource_template}")
+        # resource_response = await client.read_resource(report_resource_template)
+        # print(f"resource_response: {resource_response[0].text}")    
                 
 if __name__ == "__main__":
     asyncio.run(main())
