@@ -56,7 +56,9 @@ OPENAI_API_KEY=your_openai_api_key
 
 ## Get Started
 
-### For section 1 demo
+### * [Colab Notebook](https://colab.research.google.com/drive/1fM355sy66MQK-t5-jOHlYH5j4YxBI5o4?usp=sharing)
+
+### * Run locally section 1 demo
 
 Run the MCP Server
 
