@@ -58,7 +58,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 ### * [Colab Notebook](https://colab.research.google.com/drive/1fM355sy66MQK-t5-jOHlYH5j4YxBI5o4?usp=sharing)
 
-### * Run locally section 1 demo
+### * Run section 1 locally
 
 Run the MCP Server
 
@@ -74,8 +74,18 @@ mcp dev src/1-mcp-simple-client-server/mcp_simple_server.py
 ```
 Browse `http://127.0.0.1:6274`
 
+
 Run the MCP Client
 
 ```bash
 python src/1-mcp-simple-client-server/mcp_simple_client.py
 ```
+
+### * Run section 4-Resources locally
+
+Run MinIO with initial Resources
+
+```bash
+docker compose -f src/4-mcp-resource/resources/docker-compose.minio.yml up
+```
+Browse MinIO `http://127.0.0.1:9001/`
