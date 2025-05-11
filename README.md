@@ -58,6 +58,8 @@ OPENAI_API_KEY=your_openai_api_key
 
 ### * [Colab Notebook](https://colab.research.google.com/drive/1fM355sy66MQK-t5-jOHlYH5j4YxBI5o4?usp=sharing)
 
+---
+
 ### * Run section 1 locally
 
 Run the MCP Server
@@ -80,6 +82,8 @@ Run the MCP Client
 ```bash
 python src/1-mcp-simple-client-server/mcp_simple_client.py
 ```
+
+---
 
 ### * Run section 4-Resources locally
 
