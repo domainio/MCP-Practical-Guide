@@ -1,4 +1,4 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 import mcp.types as Resource
 import requests
 import yfinance as yf
@@ -43,6 +43,26 @@ def get_stock_price(symbol: str) -> str:
     """Get the current stock price of a given symbol."""
     stock_data = yf.Ticker(symbol)
     return f"The current price of {symbol} is ${stock_data.info['currentPrice']}."
+
+
+@mcp.resource("greetings://{name}")
+def personalized_greeting(name: str) -> str:
+    return f"Hello, {name}! Welcome to MCP."
+
+# Template list handler using raw dictionaries
+@mcp.resource("template://greetings")
+def list_greeting_templates(ctx: Context) -> list:
+    return [{
+        "uri_template": "greetings://{name}",
+        "name": "Personalized Greeting",
+        "description": "Generate custom greetings using name parameter",
+        "parameters": [{
+            "name": "name",
+            "type": "string",
+            "required": True
+        }],
+        "mime_type": "text/plain"
+    }]
 
 if __name__ == "__main__":
     mcp.run(transport="sse")
