@@ -18,37 +18,31 @@ def get_tag() -> str:
     return f"The current tag: {temp_tag_counter}"
 
 
-# @mcp.resource("report://{name}")
-# def get_report(name: str) -> str:
-#     """Get a report for a given name."""
-#     print(name)
-#     url = f"http://localhost:9000/mybucket/{name}"
-#     print(f"url: {url}")
-#     response = requests.get(url)
-#     print(f"response.status_code: {response.status_code}")
-#     print(f"response.text: {response.text}")
-#     return response.text
+@mcp.resource("report://{name}")
+def get_report(name: str) -> str:
+    """Get a report for a given name."""
+    print(name)
+    url = f"http://localhost:9000/mybucket/{name}"
+    print(f"url: {url}")
+    response = requests.get(url)
+    print(f"response.status_code: {response.status_code}")
+    print(f"response.text: {response.text}")
+    return response.text
 
 
-# @mcp.resource("template://report")
-# def list_report_templates() -> list:
-#     return [{
-#         "uri_template": "report://{name}",
-#         "name": "Personalized Greeting",
-#         "description": "Get the report resource using name parameter",
-#         "parameters": [{
-#             "name": "name",
-#             "type": "string",
-#             "required": True
-#         }],
-#         "mime_type": "text/plain"
-#     }]
-
-# @mcp.tool()
-# async def get_resource(resource_uri: str, ctx: Context) -> str:
-#     """Get a resource from the given URI."""
-#     resource = await ctx.read_resource(resource_uri)
-#     return resource.text
+@mcp.resource("template://report")
+def list_report_templates() -> list:
+    return [{
+        "uri_template": "report://{name}",
+        "name": "Personalized Greeting",
+        "description": "Get the report resource using name parameter",
+        "parameters": [{
+            "name": "name",
+            "type": "string",
+            "required": True
+        }],
+        "mime_type": "text/plain"
+    }]
 
 
 if __name__ == "__main__":
