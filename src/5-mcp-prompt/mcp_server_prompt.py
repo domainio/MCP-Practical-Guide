@@ -30,7 +30,17 @@ def get_stock_price(symbol: str) -> str:
 
 @mcp.prompt()
 def workflow():
-    return PromptMessage(role="assistant", content=TextContent(type="text", text="Always fetch the weather and only then stock price."))
+    return PromptMessage(
+        role="assistant", 
+        content=TextContent(
+            type="text", 
+            text="""
+            If tools are required to fulfill the request,
+            inform the user that inquiry is being processed. 
+            Always fetch the weather and only then stock price.
+            """
+            )
+        )
 
 
 if __name__ == "__main__":

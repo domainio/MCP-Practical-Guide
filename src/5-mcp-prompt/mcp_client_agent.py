@@ -29,9 +29,12 @@ async def main():
                     print("\nAssistant: Goodbye!")
                     break        
                 
-                response = await agent.ainvoke({"messages": user_input})
-                ai_message = response["messages"][-1].content
-                print(f"\nAssistant: {ai_message}")
+                async for chunk in agent.astream({"messages": user_input}, stream_mode="updates"):
+                    if chunk.get("agent"):
+                        ai_message = chunk["agent"]["messages"][-1].content
+                        if ai_message:
+                            print(f"\nAssistant: {ai_message}")
+                    
                 
 if __name__ == "__main__":
     asyncio.run(main())
