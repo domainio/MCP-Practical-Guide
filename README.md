@@ -104,3 +104,10 @@ npx playwright install chromium
 
 python src/6-mcp-multi-clients/browser_use.py
 ```
+
+---
+
+### * Run section 6 Multi Clients - Multi Clients
+
+Set `GITLAB_PERSONAL_ACCESS_TOKEN` in `.env`
+
