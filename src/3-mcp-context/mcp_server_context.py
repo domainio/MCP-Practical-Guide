@@ -10,6 +10,14 @@ async def get_weather(latitude: float, longitude: float, ctx: Context) -> str:
     """Get weather for a given latitude and longitude."""
     try:
         await ctx.info(f"Make a call to weather provider")
+        
+        # request = ctx.get_http_request()
+        # print(f"request: {request}")
+        # user_agent = request.headers.get("user-agent", "Unknown")
+        # print(f"user_agent: {user_agent}")
+        # client_ip = request.client.host if request.client else "Unknown"
+        # print(f"client_ip: {client_ip}")
+        
         response = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m")
         data = response.json()
         return f"The current temperature is {data['current']['temperature_2m']}°C."

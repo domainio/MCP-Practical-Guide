@@ -93,3 +93,14 @@ Run MinIO with initial Resources
 docker compose -f src/4-mcp-resource/resources/docker-compose.minio.yml up
 ```
 Browse MinIO `http://127.0.0.1:9001/`
+
+---
+
+### * Run section 6 Multi Clients - Browser Use
+
+```bash
+npx playwright install
+npx playwright install chromium
+
+python src/6-mcp-multi-clients/browser_use.py
+```
