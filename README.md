@@ -1,4 +1,4 @@
-# MCP Tutorial
+# MCP Practical Guide
 
 This repository contains code samples and exercises for the MCP Workshop, demonstrating how to build AI applications using the MCP for standardized communication between AI apps and tools.
 
