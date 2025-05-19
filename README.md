@@ -7,6 +7,21 @@ This repository contains code samples and exercises for the MCP Workshop, demons
 - Python 3.11 or higher
 - Git
 - An OpenAI API key for working with the AI models
+- Alternatively, run a Local Model with Ollama:
+  - Install Ollama: 
+    ```curl -fsSL https://ollama.com/install.sh | sh```
+  - Pull a Model: 
+    ```ollama pull llama3.2```
+  - Run the Model: 
+    ```ollama run llama3.2```
+  - Set env vars:
+    ```
+    OPENAI_API_BASE_URL=http://localhost:11434/v1
+    OPENAI_API_KEY=ollama-key
+    ```
+  - Set OpenAI base url in code: ```openai.api_base = os.getenv("OPENAI_API_BASE_URL")```
+  - Use local Ollama model in every LLM call: ```model="llama3.2"```  
+  
 
 ## Setup Instructions
 
