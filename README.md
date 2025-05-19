@@ -28,8 +28,7 @@ This repository contains code samples and exercises for the MCP Workshop, demons
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/mcp-meetup.git
-cd mcp-meetup
+git clone https://github.com/domainio/MCP-Practical-Guide.git
 ```
 
 2. **Install uv**
