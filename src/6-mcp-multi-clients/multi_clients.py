@@ -42,6 +42,7 @@ async def main():
         "finance_and_weather": sse_connection,
     }) as client:
         tools = client.get_tools()
+        print(f"✅ Connection successful! Found {len(tools)} tools.")
         print(tools)
 
         agent = create_react_agent(

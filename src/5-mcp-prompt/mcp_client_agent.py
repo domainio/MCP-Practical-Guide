@@ -13,6 +13,7 @@ async def main():
         async with ClientSession(reader, writer) as session:
             await session.initialize()
             tools = await load_mcp_tools(session)
+            print(f"✅ Connection successful! Found {len(tools)} tools.")
             # mcp_prompt = await load_mcp_prompt(session,"workflow")
             # print(f"mcp_prompt: {mcp_prompt}")
             

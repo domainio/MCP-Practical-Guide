@@ -11,6 +11,7 @@ async def main():
     async with Client(SSETransport("http://localhost:8000/sse"), log_handler=log_handler) as client:
         # List available tools
         tools_response = await client.list_tools()
+        print(f"\n✅ Connection successful! Found {len(tools_response)} tools.")
         print(f"\ntools_response: {tools_response}")
 
         # Call get_weather tool

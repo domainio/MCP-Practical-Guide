@@ -28,6 +28,7 @@ async def main():
         async with ClientSession(reader, writer) as session:
             await session.initialize()
             tools = await load_mcp_tools(session)
+            print(f"✅ Connection successful! Found {len(tools)} tools.")
             print(tools)
         
             agent = create_react_agent(
