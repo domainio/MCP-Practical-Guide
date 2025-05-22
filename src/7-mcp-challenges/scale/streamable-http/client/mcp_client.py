@@ -4,7 +4,7 @@ from fastmcp import Client
 
 
 async def main():
-    async with Client(StreamableHttpTransport(url="http://localhost:8080/mcp")) as client:
+    async with Client(StreamableHttpTransport(url="http://localhost:8080/mcp/")) as client:
         tools = await client.list_tools()
         print(f"✅ Connection successful! Found {len(tools)} tools.")
 
