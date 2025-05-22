@@ -10,7 +10,7 @@ async def main():
     # List available tools
     tools = await client.list_tools()
     print(f"✅ Connection successful! Found {len(tools)} tools.")
-    print(f"\tools: {tools}")
+    print(f"\ntools: {tools}")
 
     # Call get_weather tool
     weather_result = await client.call_tool("get_weather", {"latitude": 32.0853, "longitude": 34.7818})
