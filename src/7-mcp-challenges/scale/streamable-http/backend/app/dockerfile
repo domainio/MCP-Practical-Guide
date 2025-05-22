@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y gcc libffi-dev libssl-dev && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY server.py .
+
+# Install Python packages
+RUN pip install fastmcp yfinance requests
+
+# Expose port (default for FastMCP is 8000)
+EXPOSE 8000
+
+CMD ["python", "server.py"]
