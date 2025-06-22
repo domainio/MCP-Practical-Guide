@@ -1,18 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 import requests
-import mcp.types as types
 
-# Create capabilities with subscription enabled
-capabilities = types.ServerCapabilities(
-    resources=types.ResourcesCapability(
-        subscribe=True,
-        listChanged=True
-    )
-)
-
-# Create FastMCP server with explicit capabilities
-mcp = FastMCP("WeatherStockMCP", capabilities=capabilities)
-
+mcp = FastMCP("WeatherStockMCP")
 
 @mcp.resource("config://app")
 def get_config() -> str:
