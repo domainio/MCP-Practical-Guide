@@ -9,21 +9,12 @@ mcp = FastMCP("WeatherStockMCP")
 async def get_weather(latitude: float, longitude: float, ctx: Context) -> str:
     """Get weather for a given latitude and longitude."""
     try:
-        await ctx.info(f"Make a call to weather provider")
-        
-        # request = ctx.get_http_request()
-        # print(f"request: {request}")
-        # user_agent = request.headers.get("user-agent", "Unknown")
-        # print(f"user_agent: {user_agent}")
-        # client_ip = request.client.host if request.client else "Unknown"
-        # print(f"client_ip: {client_ip}")
-        
+        await ctx.info(f"Make a call to weather provider")    
+        await ctx.report_progress(1,2, "Getting weather data")
         response = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m")
+        await ctx.report_progress(2,2, "Done getting weather data")
         data = response.json()
         return f"The current temperature is {data['current']['temperature_2m']}°C."
-    except anyio.BrokenResourceError:
-        # Handle client disconnection gracefully
-        return "Client disconnected"
     except Exception as e:
         await ctx.error(f"Error getting weather: {e}")
         return f"Error getting weather: {e}"
@@ -32,18 +23,22 @@ async def get_weather(latitude: float, longitude: float, ctx: Context) -> str:
 async def get_stock_price(symbol: str, ctx: Context) -> str:
     """Get the current stock price of a given symbol."""
     try:
-        await ctx.info(f"Make a call to stock provider")
+        await ctx.info(f"Calling stock provider")
         print(f"ctx.request_context: {ctx.request_context}")
+        
+        # request = ctx.get_http_request()
+        # print(f"request: {request}")
+        # user_agent = request.headers.get("user-agent", "Unknown")
+        # print(f"user_agent: {user_agent}")
+        # client_ip = request.client.host if request.client else "Unknown"
+        # print(f"client_ip: {client_ip}")
         
         stock_data = yf.Ticker(symbol)
         last_price = stock_data.fast_info.last_price
         return f"The current price of {symbol} is ${last_price}."
-    except anyio.BrokenResourceError:
-        # Handle client disconnection gracefully
-        return "Client disconnected"
     except Exception as e:
         await ctx.error(f"Error getting stock price: {e}")
         return f"Error getting stock price: {e}"
 
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    mcp.run(transport="streamable-http")
