@@ -5,11 +5,7 @@ from mcp import ClientSession
 
 async def main():
     # Connect to the MCP server over SSE
-  async with streamablehttp_client("http://localhost:8000/mcp") as (
-        read_stream,
-        write_stream,
-        _,
-    ):
+  async with streamablehttp_client("http://localhost:8000/mcp") as (read_stream, write_stream, _):
        async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             # List available tools
