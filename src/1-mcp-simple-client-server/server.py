@@ -1,5 +1,4 @@
 from mcp.server.fastmcp import FastMCP
-import mcp.types as Resource
 import yfinance as yf
 import requests
 
