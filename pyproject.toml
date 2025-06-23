@@ -13,6 +13,7 @@ dependencies = [
     "langchain-text-splitters==0.3.8",
     "langgraph==0.4.8",
     "mcp[cli]==1.9.4",
+    "mcp-server-browser-use>=0.1.0",
     "openai==1.90.0",
     "python-dotenv==1.1.0",
     "yfinance==0.2.63",
