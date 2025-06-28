@@ -1,4 +1,5 @@
 import asyncio
+import time
 from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession
@@ -20,16 +21,21 @@ async def main():
                 tools=tools,
                 prompt="You are a helpful assistant"
             )
+            config = {"configurable": {"thread_id": "abc123"}}
+
             
             while True:
                 user_input = input("\n🙂: ")
                 # Exit condition
                 if user_input.lower() in ["exit", "quit", "bye"]:
                     print("\n🤖: Goodbye!")
-                    break        
-                response = await agent.ainvoke({"messages": user_input})
-                ai_message = response["messages"][-1].content
-                print(f"\n🤖: {ai_message}")
+                    break
+                
+                print("🤖: ", end="")
+                async for token, metadata in agent.astream({"messages": [user_input]}, config, stream_mode="messages"):
+                    if not getattr(token, "tool_call_id", None):
+                        print(token.content, end="", flush=True)
+                    time.sleep(0.05)
                 
 if __name__ == "__main__":
     asyncio.run(main())
