@@ -4,15 +4,12 @@ version = "0.1.0"
 description = "MCP"
 requires-python = ">=3.11.10"
 dependencies = [
-    "fastmcp==2.8.1",
-    "jupyter==1.1.1",
     "langchain==0.3.26",
     "langchain-core==0.3.66",
     "langchain-mcp-adapters==0.1.7",
     "langchain-openai==0.3.24",
     "langchain-text-splitters==0.3.8",
     "langgraph==0.4.8",
-    "mcp[cli]==1.9.4",
     "mcp-server-browser-use>=0.1.0",
     "openai==1.90.0",
     "python-dotenv==1.1.0",
@@ -20,5 +17,6 @@ dependencies = [
     "fastapi==0.115.13",
     "uvicorn==0.34.3",
     "redis==6.2.0",
-    "pydantic==2.11.7"
+    "pydantic==2.11.7",
+    "mcp[cli]>=1.10.1",
 ]
