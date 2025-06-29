@@ -1,15 +1,13 @@
-from fastmcp import FastMCP
-import mcp.types as Resource
+from mcp.server.fastmcp import FastMCP
 import yfinance as yf
 import requests
+import os
 
-mcp = FastMCP("WeatherStockMCP")
+mcp = FastMCP("WeatherStockMCP", stateless_http=True, debug=True)
 
-@mcp.tool(
-    name="get_weather",
-    description="Get the current weather for a given latitude and longitude.",
-)
+@mcp.tool("get_weather")
 def get_weather(latitude: float, longitude: float) -> str:
+    """Get the current weather for a given latitude and longitude."""
     print(f"latitude: {latitude}, longitude: {longitude}")
     response = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m")
     data = response.json()
@@ -17,11 +15,9 @@ def get_weather(latitude: float, longitude: float) -> str:
     print(f"temperature: {temperature}")
     return f"The current temperature is {temperature}°C."
 
-@mcp.tool(
-    name="get_stock_price",
-    description="Get the current stock price of a given symbol.",
-)
+@mcp.tool("get_stock_price")
 def get_stock_price(symbol: str) -> str:
+    """Get the current stock price of a given symbol."""
     print(f"symbol: {symbol}")
     stock_data = yf.Ticker(symbol)
     last_price = stock_data.fast_info.last_price
@@ -30,4 +26,4 @@ def get_stock_price(symbol: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    mcp.run(transport="streamable-http")

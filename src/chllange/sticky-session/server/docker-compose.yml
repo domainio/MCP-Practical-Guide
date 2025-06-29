@@ -1,0 +1,30 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - mcp
+    networks:
+      - mcp_network
+
+  mcp:
+    build: 
+      context: ./app
+    ports:
+      - "8000-8002:8000"
+    environment:
+      - FASTMCP_HOST=0.0.0.0
+      - FASTMCP_PORT=8000
+      - MCP_DISABLE_CSRF=true
+      - DISABLE_CSRF=true
+      - CSRF_PROTECTION=false
+    deploy:
+      replicas: 3
+    networks:
+      - mcp_network
+
+networks:
+  mcp_network:

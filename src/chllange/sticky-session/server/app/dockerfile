@@ -7,9 +7,8 @@ WORKDIR /app
 COPY server.py .
 
 # Install Python packages
-RUN pip install fastmcp yfinance requests
+RUN pip install "mcp[cli]" yfinance requests
 
-# Expose port (default for FastMCP is 8000)
 EXPOSE 8000
 
 CMD ["python", "server.py"]
