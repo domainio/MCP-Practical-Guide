@@ -19,4 +19,5 @@ dependencies = [
     "redis==6.2.0",
     "pydantic==2.11.7",
     "mcp[cli]>=1.10.1",
+    "werkzeug>=3.1.3",
 ]

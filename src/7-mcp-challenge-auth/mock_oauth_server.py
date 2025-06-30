@@ -1,61 +1,134 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import uvicorn
+from typing import Dict, Any
+import secrets
+import time
+import json
 
 app = FastAPI(title="Mock OAuth Server")
 
-# Mock OAuth discovery endpoint
+users = json.load(open("users.json"))
+
+# In-memory tokens storage for demo
+tokens: Dict[str, Dict[str, Any]] = {}
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    grant_type: str = "password"
+
 @app.get("/.well-known/oauth-authorization-server")
-def oauth_discovery():
+async def oauth_server_metadata():
     return {
         "issuer": "http://localhost:3000",
-        "authorization_endpoint": "http://localhost:3000/auth",
-        "token_endpoint": "http://localhost:3000/token",
+        "authorization_endpoint": "http://localhost:3000/auth/login",
+        "token_endpoint": "http://localhost:3000/auth/token",
         "token_introspection_endpoint": "http://localhost:3000/token/introspect",
         "revocation_endpoint": "http://localhost:3000/token/revoke",
-        "scopes_supported": ["mcp:read", "mcp:write"],
-        "grant_types_supported": ["authorization_code", "client_credentials"],
-        "response_types_supported": ["code"],
-        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"]
+        "scopes_supported": ["mcp:read", "mcp:write", "admin"],
+        "grant_types_supported": ["password"],
+        "response_types_supported": ["token"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post", "none"]
     }
 
-# Mock token introspection endpoint
-@app.post("/token/introspect")
-async def token_introspect(request: Request):
-    """Mock token introspection endpoint"""
-    from fastapi import Request
+@app.post("/auth/login")
+async def login_json(credentials: dict):
+    username = credentials.get("username")
+    password = credentials.get("password")
     
-    # Read the request body to check for token
-    body = await request.body()
-    body_str = body.decode('utf-8')
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Missing username or password")
     
-    # Check if our test token is in the request
-    if "test_token_123" in body_str:
-        return {
-            "active": True,
-            "client_id": "demo_client",
-            "scope": "mcp:read mcp:write",
-            "exp": 9999999999,  # Far future expiry
-            "sub": "user1"
-        }
-    return {"active": False}
-
-# Mock authorization endpoint
-@app.get("/auth")
-def authorize():
-    return {"message": "Mock authorization endpoint"}
-
-# Mock token endpoint
-@app.post("/token")
-def token():
-    return {
-        "access_token": "test_token_123",
-        "token_type": "Bearer",
+    user = users.get(username)
+    if not user or user["password"] != password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Generate access token
+    access_token = secrets.token_urlsafe(32)
+    
+    # Store token info
+    tokens[access_token] = {
+        "username": username,
+        "client_id": user["client_id"],
+        "scope": user["scope"],
+        "issued_at": time.time(),
         "expires_in": 3600,
-        "scope": "mcp:read mcp:write"
+        "active": True
     }
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": 3600,
+        "scope": user["scope"]
+    }
+
+@app.post("/auth/token")
+async def token_endpoint(
+    grant_type: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    client_id: str = Form(None),
+    scope: str = Form(None)
+):
+    """OAuth2 form-based token endpoint"""
+    if grant_type != "password":
+        raise HTTPException(status_code=400, detail="Unsupported grant type")
+    
+    user = users.get(username)
+    if not user or user["password"] != password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Generate access token
+    access_token = secrets.token_urlsafe(32)
+    
+    # Store token info
+    tokens[access_token] = {
+        "username": username,
+        "client_id": client_id or user["client_id"],
+        "scope": scope or user["scope"],
+        "issued_at": time.time(),
+        "expires_in": 3600,
+        "active": True
+    }
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": 3600,
+        "scope": scope or user["scope"]
+    }
+
+@app.post("/token/introspect")
+async def introspect_token(token: str = Form(...)):
+    """Token introspection endpoint for resource servers"""
+    token_info = tokens.get(token)
+    
+    if not token_info:
+        return {"active": False}
+    
+    # Check if token expired
+    if time.time() > token_info["issued_at"] + token_info["expires_in"]:
+        tokens.pop(token, None)
+        return {"active": False}
+    
+    return {
+        "active": True,
+        "client_id": token_info["client_id"],
+        "username": token_info["username"],
+        "scope": token_info["scope"],
+        "exp": int(token_info["issued_at"] + token_info["expires_in"])
+    }
+
+@app.post("/token/revoke")
+async def revoke_token(token: str = Form(...)):
+    """Token revocation endpoint"""
+    if token in tokens:
+        tokens.pop(token)
+    return JSONResponse(status_code=200, content={})
 
 if __name__ == "__main__":
-    print("🔐 Mock OAuth Server starting on http://localhost:3000")
-    print("Discovery: http://localhost:3000/.well-known/oauth-authorization-server")
-    uvicorn.run(app, host="127.0.0.1", port=3000) 
+    uvicorn.run(app, host="0.0.0.0", port=3000) 

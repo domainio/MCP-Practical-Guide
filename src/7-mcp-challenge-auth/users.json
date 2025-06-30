@@ -1,0 +1,12 @@
+{
+  "user1": {
+    "password": "password123",
+    "client_id": "application_identifier",
+    "scope": "mcp:read mcp:write"
+  },
+  "user2": {
+    "password": "secret456",
+    "client_id": "application_identifier",
+    "scope": "mcp:read"
+  }
+} 
