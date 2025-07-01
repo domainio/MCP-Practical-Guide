@@ -8,6 +8,7 @@ class MyTokenVerifier(TokenVerifier):
     
     async def verify_token(self, token: str) -> AccessToken | None:
         """Verify token with mock OAuth server introspection endpoint"""
+        print(f"[verify_token]: {token}")
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(

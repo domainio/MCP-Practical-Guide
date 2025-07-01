@@ -1,34 +1,9 @@
-import asyncio
 from typing import Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 import httpx
 from mcp.client.auth import OAuthClientProvider, TokenStorage
-from mcp.client.streamable_http import streamablehttp_client
-from mcp.client.session import ClientSession
 from mcp.shared.auth import OAuthClientMetadata, OAuthToken, OAuthClientInformationFull
-
-
-class MyTokenStorage(TokenStorage):
-    def __init__(self) -> None:
-        self._tokens: Optional[OAuthToken] = None
-        self._client_info: Optional[OAuthClientInformationFull] = None
-    
-    async def get_tokens(self) -> Optional[OAuthToken]:
-        print(f"[get_tokens]: {self._tokens}")
-        return self._tokens
-    
-    async def set_tokens(self, tokens: OAuthToken) -> None:
-        print(f"[set_tokens]: {tokens}")
-        self._tokens = tokens
-    
-    async def get_client_info(self) -> Optional[OAuthClientInformationFull]:
-        print(f"[get_client_info]: {self._client_info}")
-        return self._client_info
-    
-    async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
-        print(f"[set_client_info]: {client_info}")
-        self._client_info = client_info
-
+from .my_token_storage import MyTokenStorage
 
 class MyOAuthClientProvider(OAuthClientProvider):
     def __init__(
@@ -122,37 +97,4 @@ class MyOAuthClientProvider(OAuthClientProvider):
     async def _callback_handler(self) -> Tuple[str, Optional[str]]:
         print("[_callback_handler]")
         return (self._authorization_code, self._state_parameter)
-    
-    async def cleanup(self):
-        """Clean up HTTP client resources"""
-        await self.http_client.aclose()
 
-
-async def main() -> None:
-    mcp_server_url = "http://localhost:8000/mcp/"
-    auth_server_url = "http://localhost:3000"
-    
-    
-    oauth_client_provider = MyOAuthClientProvider(
-        mcp_server_url,
-        auth_server_url,
-        "user1", 
-        "password123"
-    )
-    
-    async with streamablehttp_client(
-        mcp_server_url,
-        auth=oauth_client_provider
-    ) as (read_stream, write_stream, _):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            tools_response = await session.list_tools()
-            print(f"tools: {tools_response.tools}")
-            result1 = await session.call_tool("protected_tool_1")
-            print(f"Tool 1: {result1.structuredContent}")
-            result2 = await session.call_tool("protected_tool_2")
-            print(f"Tool 2: {result2.structuredContent}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main()) 
