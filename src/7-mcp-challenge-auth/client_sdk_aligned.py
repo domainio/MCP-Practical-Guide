@@ -1,5 +1,4 @@
 import asyncio
-import os
 from typing import Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 import httpx
