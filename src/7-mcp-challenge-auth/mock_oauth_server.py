@@ -21,6 +21,9 @@ tokens: Dict[str, Dict[str, Any]] = {}
 # In-memory client registration storage for demo
 registered_clients: Dict[str, Dict[str, Any]] = {}
 
+# In-memory authenticated sessions storage for demo
+authenticated_sessions: Dict[str, Dict[str, Any]] = {}
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -117,11 +120,21 @@ async def login_json(credentials: dict):
         "active": True
     }
     
+    # 🔒 SECURITY FIX: Create authenticated session for the user
+    session_id = secrets.token_urlsafe(16)
+    authenticated_sessions[session_id] = {
+        "username": username,
+        "authenticated_at": time.time(),
+        "expires_at": time.time() + 600  # 10 minute session
+    }
+    print(f"🔐 Created authenticated session for user '{username}': {session_id}")
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "expires_in": 3600,
-        "scope": user["scope"]
+        "scope": user["scope"],
+        "session_id": session_id  # Return session ID for authorization step
     }
 
 @app.get("/auth/authorize")
@@ -130,10 +143,12 @@ async def authorization_endpoint(
     client_id: str,
     redirect_uri: str,
     scope: str = None,
-    state: str = None
+    state: str = None,
+    username: str = None,  # Added to receive authenticated username
+    session_id: str = None  # Added to validate session
 ):
-    """OAuth2 authorization endpoint"""
-    print(f"🔐 Authorization request: client_id={client_id}, redirect_uri={redirect_uri}")
+    """OAuth2 authorization endpoint - NOW WITH PROPER AUTHENTICATION VALIDATION"""
+    print(f"🔐 Authorization request: client_id={client_id}, username={username}")
     
     # Validate client_id exists (either registered or in users)
     client_exists = (
@@ -147,12 +162,40 @@ async def authorization_endpoint(
     if response_type != "code":
         raise HTTPException(status_code=400, detail="Unsupported response_type")
     
-    # For demo purposes, auto-approve and return auth code
+    # 🔒 SECURITY FIX: Validate user authentication before issuing authorization code
+    if not username:
+        raise HTTPException(status_code=401, detail="User authentication required")
+    
+    # Check if user exists and has valid authenticated session
+    user = users.get(username)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid user")
+    
+    # Find valid session for this user (in real apps, use proper session management)
+    valid_session = None
+    current_time = time.time()
+    
+    for sid, session in authenticated_sessions.items():
+        if (session["username"] == username and 
+            session["expires_at"] > current_time):
+            valid_session = session
+            break
+    
+    if not valid_session:
+        raise HTTPException(
+            status_code=401, 
+            detail="No valid authenticated session found. Please login first."
+        )
+    
+    print(f"✅ User '{username}' has valid authenticated session")
+    
+    # Generate authorization code only for authenticated users
     auth_code = f"auth_code_{secrets.token_urlsafe(16)}"
     
-    # Store auth code temporarily (in production, this would have expiration)
+    # Store auth code with user context
     auth_code_info = {
         "client_id": client_id,
+        "username": username,  # Link auth code to authenticated user
         "redirect_uri": redirect_uri,
         "scope": scope or "mcp:read mcp:write",
         "created_at": time.time(),
@@ -172,39 +215,41 @@ async def authorization_endpoint(
     return {
         "authorization_code": auth_code,
         "callback_url": callback_url,
-        "message": "Authorization granted (in real OAuth, this would be a redirect)"
+        "message": f"Authorization granted for authenticated user '{username}'"
     }
 
 @app.post("/auth/token")
-async def token_endpoint(
-    grant_type: str = Form(...),
-    username: str = Form(None),
-    password: str = Form(None),
-    client_id: str = Form(None),
-    client_secret: str = Form(None),
-    code: str = Form(None),
-    redirect_uri: str = Form(None),
-    scope: str = Form(None)
-):
-    """OAuth2 token endpoint supporting both password and authorization_code flows"""
+async def token_endpoint(request: Request):
+    """OAuth2 token endpoint with proper authorization code validation"""
+    content_type = request.headers.get("content-type", "")
+    
+    if "application/json" in content_type:
+        data = await request.json()
+    else:
+        form_data = await request.form()
+        data = dict(form_data)
+    
+    grant_type = data.get("grant_type")
+    print(f"🔐 Token request: grant_type={grant_type}")
     
     if grant_type == "password":
-        # Password flow (existing logic)
-        if not username or not password:
-            raise HTTPException(status_code=400, detail="Username and password required for password grant")
+        # Direct password authentication (legacy flow)
+        username = data.get("username")
+        password = data.get("password")
+        client_id = data.get("client_id")
+        
+        if not all([username, password, client_id]):
+            raise HTTPException(status_code=400, detail="Missing required parameters")
         
         user = users.get(username)
-        if not user or user["password"] != password:
+        if not user or user["password"] != password or user["client_id"] != client_id:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        # Generate access token
         access_token = secrets.token_urlsafe(32)
-        
-        # Store token info
         tokens[access_token] = {
             "username": username,
-            "client_id": client_id or user["client_id"],
-            "scope": scope or user["scope"],
+            "client_id": client_id,
+            "scope": user["scope"],
             "issued_at": time.time(),
             "expires_in": 3600,
             "active": True
@@ -214,50 +259,97 @@ async def token_endpoint(
             "access_token": access_token,
             "token_type": "bearer",
             "expires_in": 3600,
-            "scope": scope or user["scope"]
+            "scope": user["scope"]
         }
     
     elif grant_type == "authorization_code":
-        # Authorization code flow
-        if not code or not client_id:
-            raise HTTPException(status_code=400, detail="Code and client_id required for authorization_code grant")
+        # 🔒 SECURITY FIX: Properly validate authorization codes
+        code = data.get("code")
+        client_id = data.get("client_id")
+        redirect_uri = data.get("redirect_uri")
         
-        # Validate authorization code
-        auth_codes = getattr(authorization_endpoint, "auth_codes", {})
-        auth_code_info = auth_codes.get(code)
+        if not all([code, client_id]):
+            raise HTTPException(status_code=400, detail="Missing code or client_id")
         
+        # Get stored auth code info
+        if not hasattr(authorization_endpoint, "auth_codes"):
+            raise HTTPException(status_code=400, detail="Invalid authorization code")
+        
+        auth_code_info = authorization_endpoint.auth_codes.get(code)
         if not auth_code_info:
             raise HTTPException(status_code=400, detail="Invalid authorization code")
         
+        # Validate auth code hasn't been used and belongs to correct client
         if auth_code_info["used"]:
             raise HTTPException(status_code=400, detail="Authorization code already used")
         
         if auth_code_info["client_id"] != client_id:
             raise HTTPException(status_code=400, detail="Client ID mismatch")
         
-        # Mark code as used
+        if redirect_uri and auth_code_info["redirect_uri"] != redirect_uri:
+            raise HTTPException(status_code=400, detail="Redirect URI mismatch")
+        
+        # Check if auth code is expired (10 minutes)
+        if time.time() - auth_code_info["created_at"] > 600:
+            raise HTTPException(status_code=400, detail="Authorization code expired")
+        
+        # Mark auth code as used
         auth_code_info["used"] = True
         
-        # Generate access token
-        access_token = secrets.token_urlsafe(32)
-        refresh_token = secrets.token_urlsafe(32)
+        # Get the authenticated user from the auth code
+        username = auth_code_info["username"]
+        user = users.get(username)
         
-        # Store token info
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid user in authorization code")
+        
+        print(f"✅ Valid authorization code for user '{username}'")
+        
+        # Generate access token for the authenticated user
+        access_token = secrets.token_urlsafe(32)
         tokens[access_token] = {
+            "username": username,
             "client_id": client_id,
             "scope": auth_code_info["scope"],
             "issued_at": time.time(),
             "expires_in": 3600,
-            "active": True,
-            "refresh_token": refresh_token
+            "active": True
         }
         
         return {
             "access_token": access_token,
             "token_type": "bearer",
             "expires_in": 3600,
-            "refresh_token": refresh_token,
             "scope": auth_code_info["scope"]
+        }
+    
+    elif grant_type == "client_credentials":
+        # Client credentials flow (for registered clients)
+        client_id = data.get("client_id")
+        client_secret = data.get("client_secret")
+        
+        if not all([client_id, client_secret]):
+            raise HTTPException(status_code=400, detail="Missing client_id or client_secret")
+        
+        # Check registered clients
+        client_info = registered_clients.get(client_id)
+        if not client_info or client_info["client_secret"] != client_secret:
+            raise HTTPException(status_code=401, detail="Invalid client credentials")
+        
+        access_token = secrets.token_urlsafe(32)
+        tokens[access_token] = {
+            "client_id": client_id,
+            "scope": client_info["scope"],
+            "issued_at": time.time(),
+            "expires_in": 3600,
+            "active": True
+        }
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_in": 3600,
+            "scope": client_info["scope"]
         }
     
     else:

@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 import httpx
@@ -7,7 +8,8 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.client.session import ClientSession
 from mcp.shared.auth import OAuthClientMetadata, OAuthToken, OAuthClientInformationFull
 
-class MinimalTokenStorage(TokenStorage):
+
+class MyTokenStorage(TokenStorage):
     def __init__(self) -> None:
         self._tokens: Optional[OAuthToken] = None
         self._client_info: Optional[OAuthClientInformationFull] = None
@@ -29,113 +31,128 @@ class MinimalTokenStorage(TokenStorage):
         self._client_info = client_info
 
 
-class MCPOAuthClient:
+class MyOAuthClientProvider(OAuthClientProvider):
     def __init__(
         self, 
-        server_url: str = "http://localhost:8000/mcp/",
-        auth_server_url: str = "http://localhost:3000"
+        server_url: str,
+        auth_server_url: str,
+        username: str,
+        password: str
     ) -> None:
-        self.server_url = server_url
         self.auth_server_url = auth_server_url
-        self.storage = MinimalTokenStorage()
+        self.username = username
+        self.password = password
         self._authorization_code: Optional[str] = None
         self._state_parameter: Optional[str] = None
-    
-    async def _redirect_handler(self, auth_url: str) -> str:
-        print(f"[_redirect_handler] auth_url: {auth_url}")
-        return await self._simulate_oauth_authorization(auth_url)
-    
-    async def _simulate_oauth_authorization(self, auth_url: str) -> str:
-        print(f"[_simulate_oauth_authorization] auth_url: {auth_url}")
-        try:
-            # Parse the authorization URL to extract parameters
-            parsed_url = urlparse(auth_url) 
-            params = parse_qs(parsed_url.query)
-            
-            client_id = params.get('client_id', [None])[0]
-            redirect_uri = params.get('redirect_uri', [None])[0]
-            state = params.get('state', [None])[0]
-            scope = params.get('scope', [None])[0]
-            
-            if not client_id or not redirect_uri:
-                raise ValueError("Missing required OAuth parameters")
-            
-            # Call our authorization endpoint to get an auth code
-            async with httpx.AsyncClient() as client:
-                auth_response = await client.get(
-                    f"{self.auth_server_url}/auth/authorize",
-                    params={
-                        "response_type": "code",
-                        "client_id": client_id,
-                        "redirect_uri": redirect_uri,
-                        "scope": scope or "mcp:read mcp:write",
-                        "state": state
-                    }
-                )
-                auth_response.raise_for_status()
-                auth_data = auth_response.json()
-                
-                callback_url = auth_data.get("callback_url")
-                
-                # Extract and store the authorization code and state
-                if callback_url:
-                    parsed_callback = urlparse(callback_url)
-                    callback_params = parse_qs(parsed_callback.query)
-                    self._authorization_code = callback_params.get('code', [None])[0]
-                    self._state_parameter = callback_params.get('state', [None])[0]
-                
-                return callback_url
-                
-        except Exception as e:
-            print(f"OAuth authorization simulation failed: {e}")
-            # Fallback callback URL
-            fallback_code = "fallback_auth_code"
-            self._authorization_code = fallback_code
-            self._state_parameter = state
-            return f"{redirect_uri}?code={fallback_code}&state={state}"
-    
-    async def _callback_handler(self) -> Tuple[str, Optional[str]]:
-        print("[_callback_handler]")
-        if self._authorization_code:
-            return (self._authorization_code, self._state_parameter)
-        else:
-            return ("demo_fallback_auth_code", None)
-    
-    def create_oauth_provider(self) -> OAuthClientProvider:
+        
+        # Create HTTP client for authentication requests
+        self.http_client = httpx.AsyncClient()
+        
         client_metadata = OAuthClientMetadata(
-            client_name="MCP Python Client Demo",
+            client_name="MCP Client 1",
             redirect_uris=[f"{self.auth_server_url}/callback"],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
             scope="mcp:read mcp:write",
             token_endpoint_auth_method="client_secret_post"
         )
-        print(f"[create_oauth_provider]")
-        return OAuthClientProvider(
-            server_url=self.server_url,
+        
+        super().__init__(
+            server_url=server_url,
             client_metadata=client_metadata,
-            storage=self.storage,
+            storage=MyTokenStorage(),
             redirect_handler=self._redirect_handler,
             callback_handler=self._callback_handler
         )
     
-    async def connect_and_demo(self) -> bool:
-        print(f"[connect_and_demo]")
-        oauth_provider = self.create_oauth_provider()
-        async with streamablehttp_client(
-            self.server_url,
-            auth=oauth_provider
-        ) as (read_stream, write_stream, _):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                tools_response = await session.list_tools()
-                print(f"tools: {tools_response.tools}")
-          
+    async def _redirect_handler(self, auth_url: str) -> str:
+        print(f"[_redirect_handler] auth_url: {auth_url}")
+        return await self._simulate_oauth_authorization(auth_url)
+    
+    async def _simulate_oauth_authorization(self, auth_url: str) -> str:
+        """Simulate OAuth authorization flow with proper user authentication"""
+        
+        print(f"🔐 Step 1: Login with credentials...")
+        # Step 1: Login with username/password
+        login_response = await self.http_client.post(
+            f"{self.auth_server_url}/auth/login",
+            json={
+                "username": self.username,
+                "password": self.password
+            }
+        )
+        login_response.raise_for_status()
+        login_data = login_response.json()
+        print(f"✅ Login successful for user: {self.username}")
+        
+        session_id = login_data.get("session_id")
+        print(f"🔐 Step 2: Request authorization using authenticated session...")
+        
+        # Step 2: Get authorization with authenticated session
+        # Parse the auth URL to extract parameters
+        parsed = urlparse(auth_url)
+        query_params = parse_qs(parsed.query)
+        
+        auth_response = await self.http_client.get(
+            f"{self.auth_server_url}/auth/authorize",
+            params={
+                "response_type": query_params.get("response_type", ["code"])[0],
+                "client_id": query_params.get("client_id")[0],  # Use actual client_id from auth URL
+                "redirect_uri": query_params.get("redirect_uri")[0],  # Use actual redirect_uri
+                "scope": query_params.get("scope", ["mcp:read mcp:write"])[0],
+                "state": query_params.get("state", [""])[0] if "state" in query_params else None,
+                "username": self.username,  # Pass authenticated username
+                "session_id": session_id    # Pass session ID
+            }
+        )
+        auth_response.raise_for_status()
+        
+        auth_data = auth_response.json()
+        callback_url = auth_data["callback_url"]
+        print(f"✅ Authorization granted: {auth_data['message']}")
+        print(f"📞 Callback URL: {callback_url}")
+        
+        # Parse callback URL to extract authorization code and state
+        parsed_callback = urlparse(callback_url)
+        callback_params = parse_qs(parsed_callback.query)
+        self._authorization_code = callback_params.get('code', [None])[0]
+        self._state_parameter = callback_params.get('state', [None])[0]
+        
+        return callback_url
+    
+    async def _callback_handler(self) -> Tuple[str, Optional[str]]:
+        print("[_callback_handler]")
+        return (self._authorization_code, self._state_parameter)
+    
+    async def cleanup(self):
+        """Clean up HTTP client resources"""
+        await self.http_client.aclose()
+
 
 async def main() -> None:
-    client = MCPOAuthClient()
-    result = await client.connect_and_demo()
-    print(result)
+    mcp_server_url = "http://localhost:8000/mcp/"
+    auth_server_url = "http://localhost:3000"
+    
+    
+    oauth_client_provider = MyOAuthClientProvider(
+        mcp_server_url,
+        auth_server_url,
+        "user1", 
+        "password123"
+    )
+    
+    async with streamablehttp_client(
+        mcp_server_url,
+        auth=oauth_client_provider
+    ) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            tools_response = await session.list_tools()
+            print(f"tools: {tools_response.tools}")
+            result1 = await session.call_tool("protected_tool_1")
+            print(f"Tool 1: {result1.structuredContent}")
+            result2 = await session.call_tool("protected_tool_2")
+            print(f"Tool 2: {result2.structuredContent}")
 
 
 if __name__ == "__main__":
