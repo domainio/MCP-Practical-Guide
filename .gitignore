@@ -31,6 +31,10 @@ wheels/
 # Environment variables
 .env
 
+# OAuth tokens (sensitive data)
+**/tokens.json
+**/client_info.json
+
 # IDE folders
 .idea/
 .vscode/
