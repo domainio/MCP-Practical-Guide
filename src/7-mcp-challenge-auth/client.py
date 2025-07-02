@@ -15,18 +15,27 @@ async def main() -> None:
         "password123"
     )
     
-    async with streamablehttp_client(
-        mcp_server_url,
-        auth=oauth_client_provider
-    ) as (read_stream, write_stream, _):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            tools_response = await session.list_tools()
-            print(f"tools: {tools_response.tools}")
-            result1 = await session.call_tool("protected_tool_1")
-            print(f"Tool 1: {result1.structuredContent}")
-            result2 = await session.call_tool("protected_tool_2")
-            print(f"Tool 2: {result2.structuredContent}")
+    try:
+        async with streamablehttp_client(
+            mcp_server_url,
+            auth=oauth_client_provider
+        ) as (read_stream, write_stream, _):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                print("🔗 Connected to MCP server with PKCE authentication")
+                
+                tools_response = await session.list_tools()
+                print(f"🔧 Available tools: {[tool.name for tool in tools_response.tools]}")
+                
+                result1 = await session.call_tool("protected_tool_1")
+                print(f"🛡️  Tool 1 result: {result1.content}")
+                
+                result2 = await session.call_tool("protected_tool_2")
+                print(f"🛡️  Tool 2 result: {result2.content}")
+    finally:
+        # Clean up OAuth client resources
+        await oauth_client_provider.cleanup()
+        print("✅ Cleaned up OAuth client resources")
 
 
 if __name__ == "__main__":
