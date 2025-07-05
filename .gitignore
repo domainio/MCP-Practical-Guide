@@ -45,3 +45,5 @@ wheels/
 .DS_Store
 .python-version
 uv.lock
+Pipfile
+.pytest_cache/
