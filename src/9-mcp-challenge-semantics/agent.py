@@ -9,11 +9,9 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.prompts import ChatPromptTemplate
 from mcp.types import ElicitRequestParams, ElicitResult
 from mcp.shared.context import RequestContext
-from langgraph.checkpoint.memory import MemorySaver
-
+from langchain.memory import ConversationBufferMemory
+import uuid
 load_dotenv()
-
-memory = MemorySaver()
 
 async def elicitation_callback(ctx: RequestContext, params: ElicitRequestParams) -> ElicitResult:
     print(f"\n🍕 {params.message}")
@@ -52,9 +50,11 @@ async def main():
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
             ])
-            
+            config = {"configurable": {"thread_id": str(uuid.uuid1())}}
             agent = create_tool_calling_agent(model, tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+            
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory=memory)
             
             while True:
                 user_input = input("\n🙂: ")
@@ -64,12 +64,7 @@ async def main():
                     break
                 
                 print("🤖: ", end="")
-                try:
-                    # Use proper ainvoke method with correct parameters
-                    response = await agent_executor.ainvoke({"input": user_input})
-                    print(response["output"])
-                except Exception as e:
-                    print(f"Error: {e}")
+                response = await agent_executor.ainvoke({"input": user_input})
                 
 if __name__ == "__main__":
     asyncio.run(main())
