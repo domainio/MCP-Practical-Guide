@@ -1,5 +1,4 @@
 import asyncio
-import time
 from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession
@@ -10,7 +9,7 @@ from langchain.prompts import ChatPromptTemplate
 from mcp.types import ElicitRequestParams, ElicitResult
 from mcp.shared.context import RequestContext
 from langchain.memory import ConversationBufferMemory
-import uuid
+
 load_dotenv()
 
 async def elicitation_callback(ctx: RequestContext, params: ElicitRequestParams) -> ElicitResult:
@@ -50,7 +49,6 @@ async def main():
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
             ])
-            config = {"configurable": {"thread_id": str(uuid.uuid1())}}
             agent = create_tool_calling_agent(model, tools, prompt)
             memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
             
