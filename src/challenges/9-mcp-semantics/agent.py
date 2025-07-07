@@ -51,7 +51,6 @@ async def main():
             ])
             agent = create_tool_calling_agent(model, tools, prompt)
             memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-            
             agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory=memory)
             
             while True:

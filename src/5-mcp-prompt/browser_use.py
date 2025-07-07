@@ -7,10 +7,19 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.memory import ConversationBufferMemory
+from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
 
 load_dotenv()
+
+# Simple in-memory session store
+store = {}
+
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in store:
+        store[session_id] = InMemoryChatMessageHistory()
+    return store[session_id]
 
 async def main():
     openai_api_key = os.environ.get("OPENAI_API_KEY")
@@ -41,8 +50,18 @@ async def main():
                 ("placeholder", "{agent_scratchpad}")
             ])
             agent = create_tool_calling_agent(model, tools, prompt)
-            memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="output")
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False, memory=memory)
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+            
+            # Wrap with message history - this replaces ConversationBufferMemory
+            agent_with_chat_history = RunnableWithMessageHistory(
+                agent_executor,
+                get_session_history,
+                input_messages_key="input",
+                history_messages_key="chat_history",
+            )
+            
+            # Simple session ID for this conversation
+            session_id = "default_session"
 
             while True:
                 user_input = input("\n🙂: ")
@@ -51,7 +70,10 @@ async def main():
                     print("\n🤖: Goodbye!")
                     break        
                 print("🤖: ", end="", flush=True)
-                async for chunk in agent_executor.astream({"input": user_input}):
+                async for chunk in agent_with_chat_history.astream(
+                    {"input": user_input},
+                    config={"configurable": {"session_id": session_id}}
+                ):
                     if "output" in chunk:
                         for char in chunk["output"]:
                             print(char, end="", flush=True)

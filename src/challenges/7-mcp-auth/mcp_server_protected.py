@@ -3,16 +3,19 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.auth.provider import TokenVerifier, AccessToken
 from mcp.server.auth.settings import AuthSettings
 
+# Configuration constants
+AUTH_SERVER_URL = "http://localhost:3000"
+RESOURCE_SERVER_URL = "http://localhost:8000"
+REQUIRED_SCOPES = ["mcp:read", "mcp:write"]
+
 class MyTokenVerifier(TokenVerifier):
-    """Token verifier that uses mock OAuth server"""
+    """Token verifier that uses OAuth server"""
     
     async def verify_token(self, token: str) -> AccessToken | None:
-        """Verify token with mock OAuth server introspection endpoint"""
-        print(f"[verify_token]: {token}")
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "http://localhost:3000/token/introspect",
+                    f"{AUTH_SERVER_URL}/token/introspect",
                     data=f"token={token}",
                     headers={"Content-Type": "application/x-www-form-urlencoded"}
                 )
@@ -36,9 +39,9 @@ mcp = FastMCP(
     "MCP Server Protected",
     token_verifier=MyTokenVerifier(),
     auth=AuthSettings(
-        issuer_url="http://localhost:3000",
-        resource_server_url="http://localhost:8000",
-        required_scopes=["mcp:read", "mcp:write"],
+        issuer_url=AUTH_SERVER_URL,
+        resource_server_url=RESOURCE_SERVER_URL,
+        required_scopes=REQUIRED_SCOPES,
     ),
 )
 
