@@ -1,13 +1,13 @@
 import asyncio
 import os
-import time
-import uuid
 from dotenv import load_dotenv
-from langgraph.prebuilt import create_react_agent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_mcp_adapters.tools import load_mcp_tools
-from langgraph.checkpoint.memory import MemorySaver
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.prompts import ChatPromptTemplate
+from langchain.memory import ConversationBufferMemory
 
 
 load_dotenv()
@@ -21,12 +21,10 @@ async def main():
         env={
             "MCP_LLM_OPENAI_API_KEY": openai_api_key,
             "MCP_LLM_PROVIDER": "openai",
-            "MCP_LLM_MODEL_NAME": "gpt-4.1",            
+            "MCP_LLM_MODEL_NAME": "gpt-4o",
             "MCP_BROWSER_HEADLESS": "false",
         }
     )
-    
-    memory = MemorySaver()
     
     async with stdio_client(server_params) as (reader, writer):
         async with ClientSession(reader, writer) as session:
@@ -35,26 +33,29 @@ async def main():
             print(f"✅ Connection successful! Found {len(tools)} tools.")
             print(tools)
             
-            agent = create_react_agent(
-                model="gpt-4.1",
-                tools=tools,
-                prompt="You are a helpful assistant",
-                checkpointer=memory
-            )
-            
-            config = {"configurable": {"thread_id": str(uuid.uuid1())}}
-            
+            model = ChatOpenAI(model="gpt-4o", temperature=0.1)
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant."),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}")
+            ])
+            agent = create_tool_calling_agent(model, tools, prompt)
+            memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="output")
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False, memory=memory)
+
             while True:
                 user_input = input("\n🙂: ")
                 # Exit condition
                 if user_input.lower() in ["exit", "quit", "bye"]:
                     print("\n🤖: Goodbye!")
                     break        
-                print("\n🤖: ",end="", flush=True)
-                async for chunk in agent.astream({"messages": user_input}, config, stream_mode="messages"):
-                    print(chunk[0].content,end="", flush=True)
-                    time.sleep(0.05)
-                print("\n")                
+                print("🤖: ", end="", flush=True)
+                async for chunk in agent_executor.astream({"input": user_input}):
+                    if "output" in chunk:
+                        for char in chunk["output"]:
+                            print(char, end="", flush=True)
+                            await asyncio.sleep(0.02)  # Small delay for streaming effect
+            
                     
 if __name__ == "__main__":
     asyncio.run(main())

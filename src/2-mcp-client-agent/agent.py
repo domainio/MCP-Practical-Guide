@@ -18,13 +18,11 @@ async def main():
             print(tools)
         
             model = ChatOpenAI(model="gpt-4o", temperature=0.1)
-            
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are a helpful assistant. Use the available tools to help users."),
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
             ])
-            
             agent = create_tool_calling_agent(model, tools, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
             
