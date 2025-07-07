@@ -6,7 +6,7 @@ from mcp.client.stdio import stdio_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 
 
@@ -36,6 +36,7 @@ async def main():
             model = ChatOpenAI(model="gpt-4o", temperature=0.1)
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are a helpful assistant."),
+                MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}"),
                 ("placeholder", "{agent_scratchpad}")
             ])
