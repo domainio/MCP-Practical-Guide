@@ -1,28 +1,32 @@
 import asyncio
-import time
 from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession
-from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.prompts import ChatPromptTemplate
 
 load_dotenv()
 
 async def main():
-  async with streamablehttp_client("http://localhost:8000/mcp") as (read_stream, write_stream, _):
-       async with ClientSession(read_stream, write_stream) as session:
+    async with streamablehttp_client("http://localhost:8000/mcp") as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             tools = await load_mcp_tools(session)
             print(f"✅ Connection successful! Found {len(tools)} tools.")
             print(tools)
         
-            agent = create_react_agent(
-                model="gpt-4.1",
-                tools=tools,
-                prompt="You are a helpful assistant"
-            )
-            config = {"configurable": {"thread_id": "abc123"}}
-
+            model = ChatOpenAI(model="gpt-4o", temperature=0.1)
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant. Use the available tools to help users."),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}")
+            ])
+            
+            agent = create_tool_calling_agent(model, tools, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
             
             while True:
                 user_input = input("\n🙂: ")
@@ -31,11 +35,12 @@ async def main():
                     print("\n🤖: Goodbye!")
                     break
                 
-                print("🤖: ", end="")
-                async for token, metadata in agent.astream({"messages": [user_input]}, config, stream_mode="messages"):
-                    if not getattr(token, "tool_call_id", None):
-                        print(token.content, end="", flush=True)
-                    time.sleep(0.05)
+                print("🤖: ", end="", flush=True)
+                async for chunk in agent_executor.astream({"input": user_input}):
+                    if "output" in chunk:
+                        for char in chunk["output"]:
+                            print(char, end="", flush=True)
+                            await asyncio.sleep(0.02)  # Small delay for streaming effect
                 
 if __name__ == "__main__":
     asyncio.run(main())
