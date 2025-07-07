@@ -1,18 +1,20 @@
 import asyncio
+import uuid
+from typing import Dict, Any
 from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import InMemorySaver
 from mcp.types import ElicitRequestParams, ElicitResult
 from mcp.shared.context import RequestContext
-from langchain.memory import ConversationBufferMemory
 
 load_dotenv()
 
 async def elicitation_callback(ctx: RequestContext, params: ElicitRequestParams) -> ElicitResult:
+    """Handle elicitation requests from MCP server."""
     print(f"\n🍕 {params.message}")
     properties = params.requestedSchema['properties']
     extra_cheese = input(f"🙂: ")
@@ -35,33 +37,35 @@ async def main():
             await session.initialize()
             tools = await load_mcp_tools(session)
             print(f"✅ Connection successful! Found {len(tools)} tools.")
-            print(tools)
+            print(f"Available tools: {[tool.name for tool in tools]}")
 
-            # Use valid OpenAI model name
-            model = ChatOpenAI(
-                model="gpt-4o",
-                temperature=1.5
+            model = ChatOpenAI(model="gpt-4o", temperature=1.5)
+            checkpointer = InMemorySaver()
+            agent = create_react_agent(
+                model=model,
+                tools=tools,
+                prompt="You are a helpful assistant.",
+                checkpointer=checkpointer
             )
             
-            # Create proper prompt template (required for create_tool_calling_agent)
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant. Use the available tools to help users."),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}")
-            ])
-            agent = create_tool_calling_agent(model, tools, prompt)
-            memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory=memory)
+            config = {"configurable": {"thread_id": str(uuid.uuid4())}}
             
             while True:
                 user_input = input("\n🙂: ")
-                # Exit condition
+                
                 if user_input.lower() in ["exit", "quit", "bye"]:
                     print("\n🤖: Goodbye!")
                     break
                 
-                print("🤖: ", end="")
-                response = await agent_executor.ainvoke({"input": user_input})
-                
+                print("🤖: ", end="", flush=True)
+                async for token, metadata in agent.astream(
+                    {"messages": [{"role": "user", "content": user_input}]},
+                    config=config,
+                    stream_mode="messages"
+                ):
+                    if not getattr(token, "tool_call_id", None):
+                        print(token.content, end="", flush=True)
+                        await asyncio.sleep(0.08)
+                    
 if __name__ == "__main__":
     asyncio.run(main())
