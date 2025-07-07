@@ -1,25 +1,15 @@
 import asyncio
 import os
+import uuid
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import InMemorySaver
 
 load_dotenv()
-
-# Simple in-memory session store
-store = {}
-
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in store:
-        store[session_id] = InMemoryChatMessageHistory()
-    return store[session_id]
 
 async def main():
     openai_api_key = os.environ.get("OPENAI_API_KEY")
@@ -39,46 +29,42 @@ async def main():
         async with ClientSession(reader, writer) as session:
             await session.initialize()
             tools = await load_mcp_tools(session)
-            print(f"✅ Connection successful! Found {len(tools)} tools.")
-            print(tools)
+            
+            print(f"✅ Connected! Found {len(tools)} browser tools:")
+            for tool in tools:
+                print(f"  - {tool.name}: {tool.description}")
             
             model = ChatOpenAI(model="gpt-4o", temperature=0.1)
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant."),
-                MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}")
-            ])
-            agent = create_tool_calling_agent(model, tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+            checkpointer = InMemorySaver()
             
-            # Wrap with message history - this replaces ConversationBufferMemory
-            agent_with_chat_history = RunnableWithMessageHistory(
-                agent_executor,
-                get_session_history,
-                input_messages_key="input",
-                history_messages_key="chat_history",
+            agent = create_react_agent(
+                model=model,
+                tools=tools,
+                prompt="You are a helpful assistant",
+                checkpointer=checkpointer
             )
             
-            # Simple session ID for this conversation
-            session_id = "default_session"
-
+            config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+            
             while True:
                 user_input = input("\n🙂: ")
+                
                 # Exit condition
                 if user_input.lower() in ["exit", "quit", "bye"]:
                     print("\n🤖: Goodbye!")
                     break        
+                
                 print("🤖: ", end="", flush=True)
-                async for chunk in agent_with_chat_history.astream(
-                    {"input": user_input},
-                    config={"configurable": {"session_id": session_id}}
+                
+                async for token, metadata in agent.astream(
+                    {"messages": [{"role": "user", "content": user_input}]},
+                    config=config,
+                    stream_mode="messages"
                 ):
-                    if "output" in chunk:
-                        for char in chunk["output"]:
-                            print(char, end="", flush=True)
-                            await asyncio.sleep(0.02)  # Small delay for streaming effect
-            
-                    
+                    if not getattr(token, "tool_call_id", None):
+                        print(token.content, end="", flush=True)
+                        await asyncio.sleep(0.08)
+                          
+
 if __name__ == "__main__":
     asyncio.run(main())
