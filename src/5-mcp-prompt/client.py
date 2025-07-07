@@ -24,7 +24,6 @@ async def main():
         "MCP_LLM_OPENAI_API_KEY": openai_api_key,
         "MCP_LLM_PROVIDER": "openai",
         "MCP_LLM_MODEL_NAME": "gpt-4o",
-        "MCP_BROWSER_HEADLESS": "true",
     })
     
     browser_connection = StdioConnection(
