@@ -1,27 +1,37 @@
 import asyncio
 import os
+import sys
+import uuid
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient, StdioConnection, StreamableHttpConnection
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.chat_history import InMemoryChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import InMemorySaver
 
 load_dotenv()
 
 async def main():
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     
+    # Dynamically find the mcp-server-browser-use executable in the current venv
+    venv_bin_dir = Path(sys.executable).parent
+    browser_use_executable = venv_bin_dir / "mcp-server-browser-use"
+    
+    # Merge current environment with additional variables
+    browser_env = os.environ.copy()
+    browser_env.update({
+        "MCP_LLM_OPENAI_API_KEY": openai_api_key,
+        "MCP_LLM_PROVIDER": "openai",
+        "MCP_LLM_MODEL_NAME": "gpt-4o",
+        "MCP_BROWSER_HEADLESS": "true",
+    })
+    
     browser_connection = StdioConnection(
         transport="stdio",
-        command="mcp-server-browser-use",
+        command=str(browser_use_executable),
         args=[],
-        env={
-            "MCP_LLM_OPENAI_API_KEY": openai_api_key,
-            "MCP_LLM_PROVIDER": "openai",
-            "MCP_LLM_MODEL_NAME": "gpt-4o",
-        }
+        env=browser_env
     )
     
     finance_and_weather_connection = StreamableHttpConnection(
@@ -36,47 +46,40 @@ async def main():
     
     # Get tools from all configured servers
     tools = await client.get_tools()
-    print(f"✅ Connection successful! Found {len(tools)} tools.")
+    print(f"✅ Connected! Found {len(tools)} tools.")
     
     prompt_response = await client.get_prompt(prompt_name="flights_travel", server_name="finance_and_weather")
     flights_travel_mcp_prompt = prompt_response[0].content
     print(f"flights_travel_mcp_prompt: {flights_travel_mcp_prompt}")
     
-    # Create model and prompt template with memory support
     model = ChatOpenAI(model="gpt-4o", temperature=0.1)
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", flights_travel_mcp_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}")
-    ])
+    checkpointer = InMemorySaver()
     
-    agent = create_tool_calling_agent(model, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
-    
-    # Replace ConversationBufferMemory with this simple approach
-    memory = InMemoryChatMessageHistory()
-    agent_with_memory = RunnableWithMessageHistory(
-        agent_executor,
-        lambda _: memory,  # Simple: always return same memory
-        input_messages_key="input",
-        history_messages_key="chat_history",
+    agent = create_react_agent(
+        model=model,
+        tools=tools,
+        prompt=flights_travel_mcp_prompt,
+        checkpointer=checkpointer
     )
+    
+    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     
     while True:
         user_input = input("\n🙂: ")
+        
         if user_input.lower() in ["exit", "quit", "bye"]:
             print("\n🤖: Goodbye!")
             break        
+        
         print("🤖: ", end="", flush=True)
-        async for chunk in agent_with_memory.astream(
-            {"input": user_input},
-            config={"configurable": {"session_id": "default"}}
+        async for token, metadata in agent.astream(
+            {"messages": [{"role": "user", "content": user_input}]},
+            config=config,
+            stream_mode="messages"
         ):
-            if "output" in chunk:
-                for char in chunk["output"]:
-                    print(char, end="", flush=True)
-                    await asyncio.sleep(0.02)
+            if not getattr(token, "tool_call_id", None):
+                print(token.content, end="", flush=True)
+                await asyncio.sleep(0.08)
                     
 if __name__ == "__main__":
     asyncio.run(main())
