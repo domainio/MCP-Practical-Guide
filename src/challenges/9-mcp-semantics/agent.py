@@ -8,10 +8,13 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
-from mcp.types import ElicitRequestParams, ElicitResult
+from mcp.types import ElicitRequestParams, ElicitResult, LoggingMessageNotificationParams
 from mcp.shared.context import RequestContext
 
 load_dotenv()
+
+async def logging_callback(params: LoggingMessageNotificationParams):
+    print(f"\n[Server Log - {params.level.upper()}] {params.data}")
 
 async def elicitation_callback(ctx: RequestContext, params: ElicitRequestParams) -> ElicitResult:
     """Handle elicitation requests from MCP server."""
@@ -32,6 +35,7 @@ async def main():
         async with ClientSession(
             read_stream, 
             write_stream,
+            logging_callback=logging_callback,
             elicitation_callback=elicitation_callback
         ) as session:
             await session.initialize()

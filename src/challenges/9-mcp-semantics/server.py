@@ -35,6 +35,7 @@ async def order_pizza(
     ctx: Context
 ) -> str:
     """Order a pizza."""
+    await ctx.info(f"order: {order}")
     if order.extra_cheese.lower() not in {"true", "false"}:
         PizzaOrderClone = clone_model_with_values(PizzaOrder, order)        
         result = await ctx.elicit(
