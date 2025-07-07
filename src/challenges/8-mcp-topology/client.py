@@ -18,14 +18,14 @@ async def main():
             print("\nWeather:", weather_result)
 
             # Call stock tool (prefixed with mount name)
-            stock_result = await session.call_tool("stock_get_stock_price", {"symbol": "AAPL"})
+            stock_result = await session.call_tool("finance_get_stock_price", {"symbol": "AAPL"})
             print("\nStock Price:", stock_result)
             
-          #   first_name = await session.call_tool("weather_nested_get_first_name")
-          #   print("\nFirst Name:", first_name)
+            # first_name = await session.call_tool("weather_nested_get_first_name")
+            # print("\nFirst Name:", first_name)
 
-          #   mounted_servers = await session.call_tool("get_mounted_servers")
-          #   print("\nMounted Servers:", mounted_servers)
+            # mounted_servers = await session.call_tool("get_mounted_servers")
+            # print("\nMounted Servers:", mounted_servers)
 
 
 if __name__ == "__main__":

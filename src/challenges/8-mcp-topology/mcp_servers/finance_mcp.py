@@ -1,9 +1,9 @@
 from fastmcp import FastMCP
 import yfinance as yf
 
-stock_mcp = FastMCP("StockMCP")
+finance_mcp = FastMCP("FinanceMCP")
 
-@stock_mcp.tool("get_stock_price")
+@finance_mcp.tool("get_stock_price")
 def get_stock_price(symbol: str) -> str:
     """Get the current stock price of a given symbol."""
     print(f"symbol: {symbol}")

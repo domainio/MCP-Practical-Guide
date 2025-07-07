@@ -5,7 +5,7 @@ import requests
 from typing import Any
 from mcp_servers.weather_mcp import weather_mcp
 from mcp_servers.nested_server import nested_mcp
-from mcp_servers.stock_mcp import stock_mcp
+from mcp_servers.finance_mcp import finance_mcp
 
 
 registry_mcp = FastMCP("RegistryServer")
@@ -17,7 +17,7 @@ registry_mcp = FastMCP("RegistryServer")
 
 # weather_mcp.mount(nested_mcp, prefix="nested")
 registry_mcp.mount(weather_mcp, prefix="weather")
-registry_mcp.mount(stock_mcp, prefix="stock")
+registry_mcp.mount(finance_mcp, prefix="finance")
 
 if __name__ == "__main__":
     registry_mcp.run(transport="streamable-http")
