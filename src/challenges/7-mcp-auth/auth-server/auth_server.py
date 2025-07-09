@@ -13,7 +13,7 @@ import base64
 app = FastAPI(title="Simple MCP OAuth Server")
 
 # Simple settings
-users = json.load(open(os.path.join(os.path.dirname(__file__), "users.json")))
+users = json.load(open(os.path.join(os.path.dirname(__file__), "server_db_users.json")))
 
 # Store everything in memory (simple!)
 tokens: Dict[str, Dict[str, Any]] = {}
@@ -72,13 +72,21 @@ async def login_and_get_code(
     if not user or user["password"] != password:
         raise HTTPException(status_code=401, detail="Wrong username or password")
     
+    # Validate scope against user permissions
+    user_scopes = set(user["scope"].split())
+    requested_scopes = set(scope.split())
+    granted_scopes = user_scopes.intersection(requested_scopes)
+    if not granted_scopes:
+        raise HTTPException(status_code=403, detail="No authorized scopes")
+    granted_scope = " ".join(sorted(granted_scopes))
+    
     # Create authorization code
     auth_code = f"auth_code_{secrets.token_urlsafe(16)}"
     auth_codes[auth_code] = {
         "client_id": client_id,
         "username": username,
         "redirect_uri": redirect_uri,
-        "scope": scope,
+        "scope": granted_scope,
         "code_challenge": code_challenge,
         "code_challenge_method": code_challenge_method,
         "created_at": time.time(),
@@ -165,7 +173,7 @@ async def exchange_code_for_tokens(data: dict):
         "client_id": client_id,
         "scope": auth_code_info["scope"],
         "issued_at": time.time(),
-        "expires_in": 30,  # 1 hour
+        "expires_in": 3600,  # 1 hour
         "active": True,
         "refresh_token": refresh_token
     }
@@ -176,7 +184,7 @@ async def exchange_code_for_tokens(data: dict):
         "client_id": client_id,
         "scope": auth_code_info["scope"],
         "issued_at": time.time(),
-        "expires_in": 30,  # 90 days
+        "expires_in": 7776000,  # 90 days
         "active": True,
         "token_type": "refresh_token",
         "access_token": access_token
@@ -185,7 +193,7 @@ async def exchange_code_for_tokens(data: dict):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": 30,
+        "expires_in": 3600,
         "refresh_token": refresh_token,
         "scope": auth_code_info["scope"]
     }
@@ -235,7 +243,7 @@ async def refresh_tokens(data: dict):
         "client_id": client_id,
         "scope": refresh_token_info["scope"],
         "issued_at": time.time(),
-        "expires_in": 30,  # 1 hour
+        "expires_in": 30,
         "active": True,
         "refresh_token": refresh_token
     }

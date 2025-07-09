@@ -1,5 +1,5 @@
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.auth.provider import TokenVerifier, AccessToken
 from mcp.server.auth.settings import AuthSettings
 
@@ -46,13 +46,15 @@ mcp = FastMCP(
 )
 
 @mcp.tool()
-def protected_tool_1() -> str:
+def protected_tool_1(ctx: Context) -> str:
     """Protected tool 1 - requires auth"""
+    print(f"ctx.request_context: {ctx.request_context.request.scope}")
     return "This is protected data 1"
 
 @mcp.tool()
-def protected_tool_2() -> str:
+def protected_tool_2(ctx: Context) -> str:
     """Protected tool 2 - requires auth"""
+    print(f"ctx.request_context: {ctx.request_context.request.scope}")
     return "This is protected data 2"
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import httpx
 
 MCP_SERVER_URL = "http://localhost:8000/mcp/"
 AUTH_SERVER_URL = "http://localhost:3000"
-USERNAME = "user1"
+USERNAME = "user1y"
 PASSWORD = "password123"
 
 async def main():

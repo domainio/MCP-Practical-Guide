@@ -8,5 +8,10 @@
     "password": "secret456",
     "client_id": "application_identifier",
     "scope": "mcp:read"
+  },
+  "user3": {
+    "password": "pass789",
+    "client_id": "application_identifier",
+    "scope": "mcp:read"
   }
 } 

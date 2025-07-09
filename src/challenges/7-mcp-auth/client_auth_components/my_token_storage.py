@@ -11,7 +11,7 @@ class MyTokenStorage(TokenStorage):
     """Minimal token storage with smart refresh"""
     
     def __init__(self):
-        self.file = os.path.join(os.path.dirname(__file__), "tokens.json")
+        self.file = os.path.join(os.path.dirname(__file__), "client_tokens.json")
     
     def _load(self) -> Optional[dict]:
         """Load token data from file"""
@@ -82,7 +82,17 @@ class MyTokenStorage(TokenStorage):
         return None
     
     async def get_tokens(self) -> Optional[OAuthToken]:
-        """Get current tokens (may be expired)"""
+        """Get current tokens - automatically refresh if expired"""
+        print("🔍 MCP framework requesting tokens...")
+        
+        # First try to get valid tokens (with automatic refresh)
+        valid_tokens = await self.get_valid_tokens()
+        if valid_tokens:
+            print("✅ Returning valid tokens")
+            return valid_tokens
+        
+        # Fallback to raw tokens if no refresh possible
+        print("⚠️  Returning potentially expired tokens")
         data = self._load()
         if not data:
             return None
@@ -140,7 +150,28 @@ class MyTokenStorage(TokenStorage):
         return self._expired(data) or not self._server_valid(data['access_token'])
     
     async def refresh_access_token(self) -> Optional[OAuthToken]:
-        return await self.get_valid_tokens()
+        """Explicitly refresh the access token when called by MCP framework"""
+        print("🔄 MCP framework requesting token refresh...")
+        data = self._load()
+        if not data or not data.get('refresh_token'):
+            print("❌ No refresh token available")
+            return None
+        
+        # Force refresh regardless of expiry status
+        print("🔄 Forcing token refresh...")
+        refreshed_data = self._refresh(data)
+        if not refreshed_data:
+            print("❌ Token refresh failed")
+            return None
+            
+        print("✅ Token refreshed successfully")
+        return OAuthToken(
+            access_token=refreshed_data['access_token'],
+            token_type=refreshed_data.get('token_type', 'bearer'),
+            expires_in=refreshed_data.get('expires_in'),
+            refresh_token=refreshed_data.get('refresh_token'),
+            scope=refreshed_data.get('scope')
+        )
     
     async def get_client_info(self) -> Optional[OAuthClientInformationFull]:
         return None

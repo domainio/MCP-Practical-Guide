@@ -26,12 +26,9 @@ async def get_stock_price(symbol: str, ctx: Context) -> str:
         await ctx.info(f"Calling stock provider")
         print(f"ctx.request_context: {ctx.request_context}")
         
-        # request = ctx.get_http_request()
+        # request = ctx.request_context.request
         # print(f"request: {request}")
-        # user_agent = request.headers.get("user-agent", "Unknown")
-        # print(f"user_agent: {user_agent}")
-        # client_ip = request.client.host if request.client else "Unknown"
-        # print(f"client_ip: {client_ip}")
+        # print(f"request.scope: {request.scope}")
         
         stock_data = yf.Ticker(symbol)
         last_price = stock_data.fast_info.last_price
