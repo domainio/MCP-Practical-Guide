@@ -7,7 +7,7 @@ COPY pyproject.toml ./
 RUN pip install -e .
 
 # Copy application
-COPY server.py state_helper.py ./
+COPY server.py ./
 
 # Run the MCP server
 CMD ["python", "server.py"] 

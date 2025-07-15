@@ -7,19 +7,23 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
+from mcp.types import LoggingMessageNotificationParams
 
 load_dotenv()
 
+async def logging_callback(params: LoggingMessageNotificationParams):
+    print(f"\n[Server Log - {params.level.upper()}] {params.data}")
+
 async def main():
-    async with streamablehttp_client("http://localhost:8080/mcp") as (read, write, _):
-        async with ClientSession(read, write) as session:
+    headers = {"X-User-ID": "user-001"}
+    
+    async with streamablehttp_client("http://localhost:8080/mcp", headers=headers) as (read, write, _):
+        async with ClientSession(read, write, logging_callback=logging_callback) as session:
             await session.initialize()
             
-            # Load MCP tools
             tools = await load_mcp_tools(session)
             print(f"✅ Connected! Available tools: {[tool.name for tool in tools]}")
             
-            # Create agent with memory
             model = ChatOpenAI(model="gpt-4o", temperature=0.1)
             checkpointer = InMemorySaver()
             
@@ -30,7 +34,6 @@ async def main():
                 checkpointer=checkpointer
             )
             
-            # Create config with thread ID for memory persistence
             config = {"configurable": {"thread_id": str(uuid.uuid4())}}
             
             while True:
