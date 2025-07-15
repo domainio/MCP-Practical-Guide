@@ -2,22 +2,13 @@ import asyncio
 from dotenv import load_dotenv
 from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession
-from mcp.types import LoggingMessageNotificationParams
 
 load_dotenv()
-
-async def logging_callback(params: LoggingMessageNotificationParams):
-    print(f"\n[Server Log - {params.level.upper()}] {params.data}")
-
 
 async def main():
     
   async with streamablehttp_client("http://localhost:8000/mcp") as (read_stream, write_stream, _):
-       async with ClientSession(
-           read_stream, 
-           write_stream, 
-           logging_callback=logging_callback,    
-        ) as session:
+       async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             response = await session.list_resources()
             resources = response.resources
