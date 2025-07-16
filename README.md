@@ -1,127 +1,91 @@
-# MCP Practical Guide
+# MCP Workshop - Practical Examples
 
-This repository contains code samples and exercises for the MCP Workshop, demonstrating how to build AI applications using the MCP for standardized communication between AI apps and tools.
+Hands-on examples for building AI applications with Model Context Protocol (MCP).
 
-## Prerequisites
+## Quick Setup
 
-- Python 3.11 or higher
-- Git
-- An OpenAI API key for working with the AI models
-- Alternatively, run a Local Model with Ollama:
-  - Install Ollama: 
-    ```curl -fsSL https://ollama.com/install.sh | sh```
-  - Pull a Model: 
-    ```ollama pull llama3.2```
-  - Run the Model: 
-    ```ollama run llama3.2```
-  - Set env vars:
-    ```
-    OPENAI_API_BASE_URL=http://localhost:11434/v1
-    OPENAI_API_KEY=ollama-key
-    ```
-  - Set OpenAI base url in code: ```openai.api_base = os.getenv("OPENAI_API_BASE_URL")```
-  - Use local Ollama model in every LLM call: ```model="llama3.2"```  
-  
+1. **Clone and setup**
+   ```bash
+   git clone https://github.com/domainio/MCP-Practical-Guide.git
+   cd MCP-Practical-Guide
+   ```
 
-## Setup Instructions
+2. **Install dependencies**
+   ```bash
+   # Install uv if needed
+   curl -sSf https://astral.sh/uv/install.sh | bash
+   
+   # Setup project
+   uv venv && source .venv/bin/activate
+   uv pip install -e .
+   ```
 
-1. **Clone the repository**
+3. **Configure environment**
+   ```bash
+   # Create .env file
+   echo "OPENAI_API_KEY=your_openai_api_key" > .env
+   ```
 
+## Examples
+
+### 1. Simple Client-Server
 ```bash
-git clone https://github.com/domainio/MCP-Practical-Guide.git
+# Terminal 1: Run server
+python src/1-mcp-simple-client-server/server.py
+
+# Terminal 2: Run client  
+python src/1-mcp-simple-client-server/client.py
 ```
 
-2. **Install uv**
-
-If you don't have uv installed, you can install it with:
-
+### 2. MCP Inspector (Debug Tool)
 ```bash
-curl -sSf https://astral.sh/uv/install.sh | bash
+mcp dev src/1-mcp-simple-client-server/server.py
+# Open http://127.0.0.1:6274
 ```
 
-Or on Windows:
-
+### 3. Resources Example
 ```bash
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Start MinIO storage
+docker compose -f src/3-mcp-resource/resources/docker-compose.minio.yml up
+
+# Run resource client
+python src/3-mcp-resource/client.py
 ```
 
-3. **Create and activate a virtual environment with uv**
-
+### 4. Browser Automation
 ```bash
-uv venv
-source .venv/bin/activate  # On Windows, use .venv\Scripts\activate
-```
-
-4. **Install the dependencies with uv**
-
-Since this project has a pyproject.toml file, you can install all dependencies with:
-
-```bash
-uv pip install -e .
-```
-
-5. **Set up environment variables**
-
-Create a `.env` file in the project root with the following content:
-
-```
-OPENAI_API_KEY=your_openai_api_key
-```
-
-## Get Started
-
-### * [Colab Notebook](https://colab.research.google.com/drive/1fM355sy66MQK-t5-jOHlYH5j4YxBI5o4?usp=sharing)
-
----
-
-### * Run section 1 locally
-
-Run the MCP Server
-
-```bash
-python src/1-mcp-simple-client-server/mcp_simple_server.py
-```
-
-
-Run the MCP Inspector
-
-```bash
-mcp dev src/1-mcp-simple-client-server/mcp_simple_server.py
-```
-Browse `http://127.0.0.1:6274`
-
-
-Run the MCP Client
-
-```bash
-python src/1-mcp-simple-client-server/mcp_simple_client.py
-```
-
----
-
-### * Run section 4-Resources locally
-
-Run MinIO with initial Resources
-
-```bash
-docker compose -f src/4-mcp-resource/resources/docker-compose.minio.yml up
-```
-Browse MinIO `http://127.0.0.1:9001/`
-
----
-
-### * Run section 6 Multi Clients - Browser Use
-
-```bash
-npx playwright install
+# Install browser
 npx playwright install chromium
 
-python src/6-mcp-multi-clients/browser_use.py
+# Run browser automation
+python src/5-mcp-prompt/browser_use.py
 ```
+
+## Alternative: Local Models
+
+Use Ollama instead of OpenAI:
+
+```bash
+# Install and run Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.2 && ollama run llama3.2
+
+# Update .env
+echo "OPENAI_API_BASE_URL=http://localhost:11434/v1" >> .env
+echo "OPENAI_API_KEY=ollama-key" >> .env
+```
+
+## Challenges
+
+Explore advanced examples in `src/challenges/`:
+- **6-mcp-scale**: Scaling MCP servers
+- **7-mcp-auth**: OAuth authentication  
+- **8-mcp-topology**: Multi-server setups
+- **9-mcp-semantics**: Advanced AI patterns
+- **10-auth-google**: Google OAuth integration
+- **11-context-window**: Context management
 
 ---
 
-### * Run section 6 Multi Clients - Multi Clients
-
-Set `GITLAB_PERSONAL_ACCESS_TOKEN` in `.env`
+**Need help?** Check individual example directories for specific instructions.
 
