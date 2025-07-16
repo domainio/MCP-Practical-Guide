@@ -1,4 +1,4 @@
-# MCP Workshop - Practical Examples
+# MCP Practical Examples
 
 Hands-on examples for building AI applications with Model Context Protocol (MCP).
 
