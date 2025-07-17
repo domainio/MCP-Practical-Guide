@@ -29,6 +29,7 @@ Hands-on examples for building AI applications with Model Context Protocol (MCP)
 ## Examples
 
 ### 1. Simple Client-Server
+Basic MCP server with weather and stock tools, demonstrating fundamental client-server communication.
 ```bash
 # Terminal 1: Run server
 python src/1-mcp-simple-client-server/server.py
@@ -37,28 +38,60 @@ python src/1-mcp-simple-client-server/server.py
 python src/1-mcp-simple-client-server/client.py
 ```
 
-### 2. MCP Inspector (Debug Tool)
+### 2. MCP Client Agent
+Integration of MCP client with LangGraph agents for conversational AI interactions.
+```bash
+# Terminal 1: Run server (from example 1)
+python src/1-mcp-simple-client-server/server.py
+
+# Terminal 2: Run agent client
+python src/2-mcp-client-agent/agent.py
+```
+
+### 3. MCP Inspector (Debug Tool)
+Use the MCP inspector to debug and explore your MCP servers.
 ```bash
 mcp dev src/1-mcp-simple-client-server/server.py
 # Open http://127.0.0.1:6274
 ```
 
-### 3. Resources Example
+### 4. Resources Example
+MCP resources with MinIO storage backend for file and data management.
 ```bash
 # Start MinIO storage
 docker compose -f src/3-mcp-resource/resources/docker-compose.minio.yml up
 
-# Run resource client
+# Terminal 1: Run server
+python src/3-mcp-resource/server.py
+
+# Terminal 2: Run resource client
 python src/3-mcp-resource/client.py
 ```
 
-### 4. Browser Automation
+### 5. Context & Progress Tracking
+Advanced MCP server with context features including progress reporting and logging.
 ```bash
-# Install browser
+# Terminal 1: Run context server
+python src/4-mcp-context/server.py
+
+# Terminal 2: Run context client
+python src/4-mcp-context/client.py
+```
+
+### 6. Prompts & Browser Automation
+MCP server with custom prompts and browser automation capabilities.
+```bash
+# Terminal 1: Run prompt server
+python src/5-mcp-prompt/server.py
+
+# Terminal 2: Install browser dependencies
 npx playwright install chromium
 
 # Run browser automation
 python src/5-mcp-prompt/browser_use.py
+
+# Or run prompt client
+python src/5-mcp-prompt/client.py
 ```
 
 ## Alternative: Local Models
@@ -78,14 +111,27 @@ echo "OPENAI_API_KEY=ollama-key" >> .env
 ## Challenges
 
 Explore advanced examples in `src/challenges/`:
-- **6-mcp-scale**: Scaling MCP servers
-- **7-mcp-auth**: OAuth authentication  
-- **8-mcp-topology**: Multi-server setups
-- **9-mcp-semantics**: Advanced AI patterns
-- **10-auth-google**: Google OAuth integration
-- **11-context-window**: Context management
+
+### 6. MCP Scale
+Demonstrates scaling MCP servers with Redis state management and load balancing.
+- **Stateless**: Simple scaling example
+- **DB-State**: Redis-backed stateful scaling with Docker composition
+
+### 7. Context Window Management
+Advanced context window management techniques for large conversations.
+
+### 8. MCP Semantics
+Advanced AI patterns including agent elicitation and sampling techniques.
+
+### 9. MCP Authentication
+OAuth authentication flows and protected MCP servers.
+- **9-mcp-auth**: General OAuth implementation
+- **9-auth-google**: Google-specific OAuth integration
+
+### 10. MCP Topology
+Multi-server setups with registry patterns and nested server mounting.
 
 ---
 
-**Need help?** Check individual example directories for specific instructions.
+**Need help?** Check individual example directories for specific instructions and additional documentation.
 
